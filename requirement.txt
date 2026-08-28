@@ -1,0 +1,18 @@
+# Core scientific/data stack
+numpy
+pandas
+
+# Deep learning
+torch
+torchvision
+
+# Backend / API
+fastapi
+uvicorn[standard]
+pydantic
+
+# Environment/configuration
+python-dotenv
+
+# Optional utilities commonly used in Python ML workflows
+scikit-learn
