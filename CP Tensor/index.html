@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NutriAI — Diet Recommender</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:       #0c0f14;
+  --bg2:      #131720;
+  --bg3:      #1a2030;
+  --card:     #1e2535;
+  --border:   #2a3347;
+  --accent:   #4ade80;
+  --accent2:  #22d3ee;
+  --accent3:  #f59e0b;
+  --text:     #e8edf5;
+  --muted:    #7a869e;
+  --danger:   #f87171;
+  --radius:   14px;
+  --shadow:   0 8px 32px rgba(0,0,0,.45);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── Background mesh ───────────────────────────────────────── */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(74,222,128,.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(34,211,238,.06) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 60% at 50% 50%, rgba(245,158,11,.04) 0%, transparent 70%);
+  pointer-events:none;z-index:0
+}
+
+/* ── Layout ─────────────────────────────────────────────────── */
+.page{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:40px 24px 80px}
+
+/* ── Header ─────────────────────────────────────────────────── */
+header{text-align:center;margin-bottom:56px}
+.logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:20px}
+.logo-icon{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:12px;display:grid;place-items:center;font-size:22px}
+.logo-text{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+header h1{font-family:'Playfair Display',serif;font-size:clamp(32px,5vw,52px);font-weight:700;line-height:1.15;margin-bottom:14px}
+header h1 span{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+header p{color:var(--muted);font-size:17px;max-width:520px;margin:0 auto}
+
+/* ── Form card ──────────────────────────────────────────────── */
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:36px 40px;box-shadow:var(--shadow);margin-bottom:40px}
+.form-card h2{font-family:'Playfair Display',serif;font-size:22px;margin-bottom:28px;color:var(--text)}
+.form-card h2 span{color:var(--accent);font-size:14px;font-family:'DM Sans',sans-serif;font-weight:500;margin-left:10px;background:rgba(74,222,128,.12);padding:3px 10px;border-radius:20px}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+@media(max-width:640px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+.field{display:flex;flex-direction:column;gap:7px}
+.field label{font-size:13px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.field input,.field select{
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;
+  outline:none;transition:border-color .2s,box-shadow .2s
+}
+.field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(74,222,128,.15)}
+.field select option{background:var(--bg2)}
+
+/* ── Gender toggle ──────────────────────────────────────────── */
+.gender-toggle{display:flex;gap:10px}
+.gender-btn{flex:1;padding:11px 0;border-radius:10px;border:1.5px solid var(--border);background:var(--bg2);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.gender-btn.active{border-color:var(--accent);background:rgba(74,222,128,.12);color:var(--accent)}
+
+/* ── Submit button ──────────────────────────────────────────── */
+.submit-row{margin-top:28px}
+.btn-submit{
+  width:100%;padding:16px;border-radius:12px;border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#0c0f14;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;
+  cursor:pointer;transition:opacity .2s,transform .15s;display:flex;align-items:center;justify-content:center;gap:8px
+}
+.btn-submit:hover{opacity:.9;transform:translateY(-1px)}
+.btn-submit:active{transform:translateY(0)}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* ── Loader ─────────────────────────────────────────────────── */
+.loader{display:none;text-align:center;padding:60px;color:var(--muted)}
+.loader.show{display:block}
+.spinner{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Stats bar ──────────────────────────────────────────────── */
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+@media(max-width:640px){.stats-bar{grid-template-columns:1fr 1fr}}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;text-align:center}
+.stat-value{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;margin-bottom:4px}
+.stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.stat-card.green .stat-value{color:var(--accent)}
+.stat-card.cyan  .stat-value{color:var(--accent2)}
+.stat-card.amber .stat-value{color:var(--accent3)}
+.stat-card.red   .stat-value{color:var(--danger)}
+
+/* ── Meal section ───────────────────────────────────────────── */
+.results{display:none}.results.show{display:block}
+.meal-section{margin-bottom:28px}
+.meal-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.meal-icon{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:20px}
+.meal-icon.breakfast{background:rgba(245,158,11,.15)}
+.meal-icon.lunch    {background:rgba(74,222,128,.12)}
+.meal-icon.snack    {background:rgba(34,211,238,.12)}
+.meal-icon.dinner   {background:rgba(248,113,113,.12)}
+.meal-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:600}
+.meal-meta{font-size:13px;color:var(--muted);margin-left:auto;font-family:'DM Mono',monospace}
+
+/* ── Option tabs ────────────────────────────────────────────── */
+.option-tabs{display:flex;gap:2px;background:var(--bg2);border-radius:10px;padding:3px;width:fit-content;margin-bottom:14px}
+.opt-tab{padding:6px 18px;border-radius:8px;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s}
+.opt-tab.active{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+
+/* ── Food items ─────────────────────────────────────────────── */
+.food-list{display:flex;flex-direction:column;gap:10px}
+.food-item{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:14px 18px;display:flex;align-items:center;gap:14px;
+  animation:slideIn .3s ease forwards;opacity:0
+}
+@keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+.food-item:nth-child(1){animation-delay:.05s}
+.food-item:nth-child(2){animation-delay:.1s}
+.food-item:nth-child(3){animation-delay:.15s}
+.food-rank{width:30px;height:30px;border-radius:8px;background:var(--bg2);display:grid;place-items:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);flex-shrink:0}
+.food-name{flex:1;font-size:15px;font-weight:500}
+.food-grams{font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);background:rgba(74,222,128,.1);padding:3px 9px;border-radius:6px}
+.food-macros{display:flex;gap:8px}
+.macro-tag{font-family:'DM Mono',monospace;font-size:12px;padding:3px 8px;border-radius:6px}
+.macro-p{background:rgba(34,211,238,.1);color:var(--accent2)}
+.macro-c{background:rgba(245,158,11,.1);color:var(--accent3)}
+
+/* ── Option subtotal ────────────────────────────────────────── */
+.subtotal{display:flex;gap:10px;margin-top:10px;padding:12px 16px;background:var(--bg2);border-radius:10px;font-size:13px;color:var(--muted)}
+.subtotal strong{color:var(--text);font-family:'DM Mono',monospace}
+
+/* ── Score badge ────────────────────────────────────────────── */
+.score-bar{height:4px;border-radius:2px;background:var(--border);width:60px;overflow:hidden}
+.score-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .6s ease}
+
+/* ── Error ──────────────────────────────────────────────────── */
+.error-box{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);border-radius:12px;padding:16px 20px;color:var(--danger);margin-bottom:20px;display:none}
+.error-box.show{display:block}
+
+/* ── Divider ────────────────────────────────────────────────── */
+.divider{border:none;border-top:1px solid var(--border);margin:28px 0}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+footer{text-align:center;color:var(--muted);font-size:13px;margin-top:60px}
+footer span{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🥗</div>
+      <div class="logo-text">NutriAI</div>
+    </div>
+    <h1>Your Personal<br/><span>AI Diet Planner</span></h1>
+    <p>Context-aware food recommendations powered by CP Decomposition — a 3D tensor model trained on your country, goal, and meal timing.</p>
+  </header>
+
+  <!-- Form -->
+  <div class="form-card">
+    <h2>Your Profile <span>CP Tensor Model</span></h2>
+
+    <div class="field" style="margin-bottom:20px">
+      <label>Gender</label>
+      <div class="gender-toggle">
+        <button class="gender-btn active" onclick="setGender('male',this)">♂ Male</button>
+        <button class="gender-btn" onclick="setGender('female',this)">♀ Female</button>
+      </div>
+    </div>
+
+    <div class="grid-3" style="margin-bottom:20px">
+      <div class="field">
+        <label>Weight (kg)</label>
+        <input type="number" id="weight" placeholder="75" min="30" max="200" value="75"/>
+      </div>
+      <div class="field">
+        <label>Height (cm)</label>
+        <input type="number" id="height" placeholder="175" min="100" max="250" value="175"/>
+      </div>
+      <div class="field">
+        <label>Age (years)</label>
+        <input type="number" id="age" placeholder="24" min="10" max="100" value="24"/>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:8px">
+      <div class="field">
+        <label>Fitness Goal</label>
+        <select id="goal">
+          <option value="Weight Gain">Weight Gain / Muscle Gain</option>
+          <option value="Weight Loss">Weight Loss</option>
+          <option value="Maintenance">Maintenance</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Country</label>
+        <select id="country">
+          <option value="">Loading countries...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="submit-row">
+      <button class="btn-submit" id="submitBtn" onclick="getRecommendation()">
+        <span>🍽️</span> Generate My Diet Plan
+      </button>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- Loader -->
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <p>Scoring foods with CP tensor model...</p>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+
+    <!-- Stats bar -->
+    <div class="stats-bar" id="statsBar"></div>
+
+    <hr class="divider"/>
+
+    <!-- Meals -->
+    <div id="mealsContainer"></div>
+  </div>
+
+</div>
+
+<footer>
+  <p>Powered by <span>CP Decomposition</span> · Context-Aware Recommender System · Inspired by LDOS-CoMoDa</p>
+</footer>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let selectedGender = 'male';
+
+function setGender(g, el) {
+  selectedGender = g;
+  document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Load countries from API ────────────────────────────────────────────────
+async function loadCountries() {
+  try {
+    const res  = await fetch('/api/countries');
+    const list = await res.json();
+    const sel  = document.getElementById('country');
+    sel.innerHTML = list.map(c =>
+      `<option value="${c}" ${c==='Pakistan'?'selected':''}>${c}</option>`
+    ).join('');
+  } catch(e) {
+    document.getElementById('country').innerHTML =
+      '<option value="Pakistan">Pakistan</option>';
+  }
+}
+
+// ── Get recommendation ─────────────────────────────────────────────────────
+async function getRecommendation() {
+  const weight  = parseFloat(document.getElementById('weight').value);
+  const height  = parseFloat(document.getElementById('height').value);
+  const age     = parseInt(document.getElementById('age').value);
+  const goal    = document.getElementById('goal').value;
+  const country = document.getElementById('country').value;
+
+  // Validate
+  if (!weight || !height || !age) {
+    showError('Please fill in all fields.');
+    return;
+  }
+  if (weight < 30 || weight > 200) { showError('Weight must be 30–200 kg.'); return; }
+  if (height < 100 || height > 250) { showError('Height must be 100–250 cm.'); return; }
+  if (age < 10 || age > 100) { showError('Age must be 10–100 years.'); return; }
+
+  hideError();
+  setLoading(true);
+  document.getElementById('results').classList.remove('show');
+
+  try {
+    const res  = await fetch('/api/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weight, height, age, gender: selectedGender, goal, country })
+    });
+    const data = await res.json();
+
+    if (data.error) { showError(data.error); setLoading(false); return; }
+
+    renderResults(data);
+  } catch(e) {
+    showError('Could not connect to server. Make sure app.py is running.');
+  }
+  setLoading(false);
+}
+
+// ── Render results ─────────────────────────────────────────────────────────
+function renderResults(data) {
+  // Stats bar
+  const statsHtml = `
+    <div class="stat-card green">
+      <div class="stat-value">${data.daily_calories}</div>
+      <div class="stat-label">Daily Calories</div>
+    </div>
+    <div class="stat-card cyan">
+      <div class="stat-value">${data.protein_target}g</div>
+      <div class="stat-label">Protein Target</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-value">${data.bmr}</div>
+      <div class="stat-label">BMR (kcal)</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-value">${data.goal.split(' ')[0]}</div>
+      <div class="stat-label">Goal Mode</div>
+    </div>
+  `;
+  document.getElementById('statsBar').innerHTML = statsHtml;
+
+  // Meals
+  const meals = [
+    { key: 'Breakfast', icon: '☀️', cls: 'breakfast' },
+    { key: 'Lunch',     icon: '🌤️', cls: 'lunch'     },
+    { key: 'Snack',     icon: '🍎', cls: 'snack'     },
+    { key: 'Dinner',    icon: '🌙', cls: 'dinner'    },
+  ];
+
+  let html = '';
+  meals.forEach(m => {
+    const md   = data.plan[m.key];
+    const opts = ['option1', 'option2'];
+    html += `
+      <div class="meal-section">
+        <div class="meal-header">
+          <div class="meal-icon ${m.cls}">${m.icon}</div>
+          <div class="meal-title">${m.key}</div>
+          <div class="meal-meta">${md.target_prot}g P · ${md.target_cal} kcal</div>
+        </div>
+        <div class="option-tabs" id="tabs-${m.key}">
+          <button class="opt-tab active" onclick="switchTab('${m.key}',0,this)">Option A</button>
+          <button class="opt-tab"        onclick="switchTab('${m.key}',1,this)">Option B</button>
+        </div>
+        <div id="panel-${m.key}-0">
+          ${renderOption(md.option1)}
+        </div>
+        <div id="panel-${m.key}-1" style="display:none">
+          ${renderOption(md.option2)}
+        </div>
+      </div>
+      <hr class="divider"/>
+    `;
+  });
+
+  document.getElementById('mealsContainer').innerHTML = html;
+  document.getElementById('results').classList.add('show');
+  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderOption(opt) {
+  const items = opt.items.map((item, i) => `
+    <div class="food-item">
+      <div class="food-rank">#${i+1}</div>
+      <div class="food-name">${item.food}</div>
+      <div class="food-grams">${item.grams}g</div>
+      <div class="food-macros">
+        <span class="macro-tag macro-p">${item.protein}g P</span>
+        <span class="macro-tag macro-c">${item.calories} kcal</span>
+      </div>
+      <div>
+        <div class="score-bar">
+          <div class="score-fill" style="width:${Math.round(item.score*100)}%"></div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="food-list">${items}</div>
+    <div class="subtotal">
+      <span>Subtotal:</span>
+      <strong>${opt.total_protein}g Protein</strong>
+      <span>·</span>
+      <strong>${opt.total_calories} kcal</strong>
+    </div>
+  `;
+}
+
+function switchTab(meal, idx, el) {
+  document.querySelectorAll(`#tabs-${meal} .opt-tab`)
+    .forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  [0, 1].forEach(i => {
+    document.getElementById(`panel-${meal}-${i}`).style.display = i === idx ? 'block' : 'none';
+  });
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function showError(msg) {
+  const b = document.getElementById('errorBox');
+  b.textContent = '⚠️  ' + msg;
+  b.classList.add('show');
+}
+function hideError() {
+  document.getElementById('errorBox').classList.remove('show');
+}
+function setLoading(on) {
+  document.getElementById('loader').classList.toggle('show', on);
+  document.getElementById('submitBtn').disabled = on;
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+loadCountries();
+</script>
+</body>
+</html>
